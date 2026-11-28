@@ -1,0 +1,162 @@
+<eventFormatRecognizer><![CDATA[^AWS_S3_LOG_DNS:]]></eventFormatRecognizer>
+<patternDefinitions>
+    <pattern name="patProtoStr"><![CDATA[(?:TCP|UDP|tcp|udp)]]></pattern>
+    <pattern name="patDomainNoDot"><![CDATA[[^\.]+(?:\.[^\.]+)*]]></pattern>
+</patternDefinitions>
+<parsingInstructions>
+    <!-- 1. 拆解 S3 標頭與 JSON 內容 -->
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[^AWS_S3_LOG_DNS:phCustId=<_custId:gPatInt>,reptDevIpAddr=<reptDevIpAddr:gPatIpAddr>,reptDevName=<reptDevName:gPatStrComma>,msg=<_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+
+    <setEventAttribute attr="eventType">AWS-Route53-DNS-Generic</setEventAttribute>
+    <setEventAttribute attr="eventAction">0</setEventAttribute>
+
+    <!-- 2. 解析 Route 53 Resolver Query Log JSON 欄位 -->
+    <collectAndSetAttrByJSON src="$_body">
+        <attrKeyMap attr="accountId" key="account_id"/>
+        <attrKeyMap attr="awsRegion" key="region"/>
+        <attrKeyMap attr="vpcId" key="vpc_id"/>
+        <attrKeyMap attr="_queryTime" key="query_timestamp"/>
+        <attrKeyMap attr="dnsQueryName" key="query_name"/>
+        <attrKeyMap attr="dnsQueryType" key="query_type"/>
+        <attrKeyMap attr="dnsQueryClass" key="query_class"/>
+        <attrKeyMap attr="_rcode" key="rcode"/>
+        <attrKeyMap attr="_srcIpAddr" key="srcaddr"/>
+        <attrKeyMap attr="srcIpPort" key="srcport"/>
+        <attrKeyMap attr="_destIpAddr" key="dstaddr"/>
+        <attrKeyMap attr="destIpPort" key="dstport"/>
+        <attrKeyMap attr="_transport" key="transport"/>
+        <attrKeyMap attr="ec2InstanceId" key="srcids.instance"/>
+        <attrKeyMap attr="resourceId" key="srcids.resolver_endpoint"/>
+        <attrKeyMap attr="fwAction" key="firewall_rule_action"/>
+        <attrKeyMap attr="policyName" key="firewall_rule_group_id"/>
+        <attrKeyMap attr="fwRule" key="firewall_domain_list_id"/>
+        <attrKeyMap attr="_answer0" key="answers[0].Rdata"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- 3. 轉換 ISO 8601 時間戳記（含時區）為 deviceTime -->
+    <when test="exist _queryTime">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_queryTime">
+                    <regex><![CDATA[^<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+                </collectFieldsByRegex>
+                <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- 4. 驗證來源與目的 IP 格式 -->
+    <when test="exist _srcIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_srcIpAddr">
+                    <regex><![CDATA[^<srcIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="srcName">$_srcIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <when test="exist _destIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_destIpAddr">
+                    <regex><![CDATA[^<destIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="destName">$_destIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <!-- 5. 標準化通訊協定為 IANA 編號 -->
+    <when test="exist _transport">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_transport">
+                    <regex><![CDATA[^<_protoUpper:patProtoStr>$]]></regex>
+                </collectFieldsByRegex>
+                <setEventAttribute attr="_protoUpper">toUpper($_protoUpper)</setEventAttribute>
+                <choose>
+                    <when test="$_protoUpper = 'UDP'">
+                        <setEventAttribute attr="ipProto">17</setEventAttribute>
+                    </when>
+                    <when test="$_protoUpper = 'TCP'">
+                        <setEventAttribute attr="ipProto">6</setEventAttribute>
+                    </when>
+                </choose>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- 6. 記錄首筆 DNS 回應內容 -->
+    <when test="exist _answer0">
+        <setEventAttribute attr="details">$_answer0</setEventAttribute>
+    </when>
+
+    <!-- 7. 填入 destName、destDomain 與計算 domainEntropy -->
+    <when test="exist dnsQueryName">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$dnsQueryName">
+                    <regex><![CDATA[^<destName:patDomainNoDot>\.?$]]></regex>
+                </collectFieldsByRegex>
+                <setEventAttribute attr="destDomain">$destName</setEventAttribute>
+                <setEventAttribute attr="domainEntropy">calcDomainEntropy($destName)</setEventAttribute>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- 8. 依 DNS Firewall 動作或異常 rcode 細分 Event Type（NOERROR 維持 Generic） -->
+    <choose>
+        <when test="exist fwAction">
+            <setEventAttribute attr="fwAction">toUpper($fwAction)</setEventAttribute>
+            <setEventAttribute attr="eventType">combineMsgId("AWS-Route53-DNS-Firewall-", $fwAction)</setEventAttribute>
+            <choose>
+                <when test="$fwAction = 'BLOCK'">
+                    <setEventAttribute attr="status">failed</setEventAttribute>
+                    <setEventAttribute attr="eventAction">1</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">6</setEventAttribute>
+                </when>
+                <otherwise>
+                    <setEventAttribute attr="status">success</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">4</setEventAttribute>
+                </otherwise>
+            </choose>
+        </when>
+        <when test="exist _rcode">
+            <setEventAttribute attr="_rcode">toUpper($_rcode)</setEventAttribute>
+            <choose>
+                <when test="$_rcode = 'NOERROR'">
+                    <setEventAttribute attr="eventType">AWS-Route53-DNS-Generic</setEventAttribute>
+                    <setEventAttribute attr="status">success</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+                </when>
+                <otherwise>
+                    <setEventAttribute attr="eventType">combineMsgId("AWS-Route53-DNS-", $_rcode)</setEventAttribute>
+                    <setEventAttribute attr="status">failed</setEventAttribute>
+                    <setEventAttribute attr="errReason">$_rcode</setEventAttribute>
+                    <choose>
+                        <when test="$_rcode = 'NXDOMAIN'">
+                            <setEventAttribute attr="eventSeverity">3</setEventAttribute>
+                        </when>
+                        <when test="$_rcode = 'TIMEOUT'">
+                            <setEventAttribute attr="eventSeverity">4</setEventAttribute>
+                        </when>
+                        <otherwise>
+                            <setEventAttribute attr="eventSeverity">5</setEventAttribute>
+                        </otherwise>
+                    </choose>
+                </otherwise>
+            </choose>
+        </when>
+    </choose>
+</parsingInstructions>

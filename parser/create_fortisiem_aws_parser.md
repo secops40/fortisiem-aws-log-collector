@@ -2,7 +2,6 @@
 name: create-fortisiem-aws-parser
 description: Create, validate, and review custom FortiSIEM XML Event Parsers for AWS log sources (such as AWS WAF, AWS Network Firewall, Route 53 Resolver DNS, CloudTrail, and VPC Flow Logs) ingested via S3 or syslog. Use when the user asks to write, generate, debug, or review a FortiSIEM XML parser from AWS sample logs.
 ---
-
 # Create FortiSIEM AWS Parser
 
 Generate production-ready FortiSIEM custom XML event parsers for AWS logs ingested through S3 pipelines, strictly adhering to FortiSIEM 7.6.1 Parser Specification, built-in patterns, and built-in functions.
@@ -62,8 +61,18 @@ AWS S3 logs arriving in FortiSIEM typically share the prefix structure `PREFIX:p
     ```
 - **10-digit Unix Epoch (seconds)** (e.g., VPC Flow Logs `start` / `end`):
   - Parse via `<regex><![CDATA[^<_timestamp:gPatInt>$]]></regex>` and assign directly to `eventTime` and `deviceTime` (`<setEventAttribute attr="deviceTime">$_timestamp</setEventAttribute>`). Do NOT call `toDateTime($_timestamp)`.
-- **ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ` or with offset)** (e.g., CloudTrail `eventTime`, Route 53 DNS `query_timestamp`, Network Firewall `event.timestamp`):
-  - Always prefer ISO 8601 strings over Epoch fields when both exist in the log. Extract components with `gPatYear`, `gPatMon` (or `gPatMonNum`), `gPatDay`, `gPatTime` (and optional `gPatTimeZone`) and call `toDateTime($_mon, $_day, $_year, $_time)` (or 5-argument `toDateTime($_mon, $_day, $_year, $_time, $_zone)`).
+- **ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`, with optional fractional seconds or offset)** (e.g., CloudTrail `eventTime`, GuardDuty `updatedAt`, Security Hub `UpdatedAt`, Route 53 DNS `query_timestamp`, Network Firewall `event.timestamp`):
+  - Always prefer ISO 8601 strings over Epoch fields when both exist in the log.
+  - **ALWAYS capture the trailing timezone (`Z` or offset) into `<_tz:gPatTimeZone>` and call the 5-argument `toDateTime($_mon, $_day, $_year, $_time, $_tz)`**. **NEVER** drop `Z` and call 4-argument `toDateTime($_mon, $_day, $_year, $_time)` on UTC logs — without `$_tz`, FortiSIEM treats the timestamp as the collector/system local timezone (e.g., UTC+8), shifting `deviceTime` by the timezone offset.
+  - Include `(?:\.\d+)?` before `<_tz:gPatTimeZone>` when fractional seconds (e.g., `.299Z`) may be present:
+    ```xml
+    <when test="exist _eventTime">
+        <collectFieldsByRegex src="$_eventTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    ```
 
 ### 5. Temporary Variables (`_`) & Standard Attributes (Critical)
 
@@ -87,7 +96,7 @@ AWS S3 logs arriving in FortiSIEM typically share the prefix structure `PREFIX:p
 3. **Self-Verify Before Output**:
    - Confirm zero occurrences of `</setAttribute>` — every `<setEventAttribute>` must close with `</setEventAttribute>`.
    - Confirm every intermediate or non-standard variable used in `exist`, `test`, or `combineMsgId` starts with `_`.
-   - Confirm `deviceTime` is explicitly populated and zero single-argument `toDateTime()` calls exist.
+   - Confirm `deviceTime` is explicitly populated, zero single-argument `toDateTime()` calls exist, and ISO 8601 timestamps capture `<_tz:gPatTimeZone>` with 5-argument `toDateTime(..., $_tz)`.
    - Confirm zero inline regexes exist inside `<attr:pattern>` tags, and every pattern in `<patternDefinitions>` is used.
 4. **Deliver Output**: Provide the clean XML block, a field mapping summary based on the user's sample log, and the exact list of `eventType` values generated.
 

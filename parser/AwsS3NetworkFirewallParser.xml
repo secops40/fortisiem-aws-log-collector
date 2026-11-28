@@ -1,0 +1,148 @@
+<eventFormatRecognizer><![CDATA[^AWS_S3_FIREWALL:]]></eventFormatRecognizer>
+<patternDefinitions>
+    <pattern name="patAwsRegion"><![CDATA[[a-z]+-[a-z]+-\d+]]></pattern>
+    <pattern name="patAzLetter"><![CDATA[[a-z]]]></pattern>
+</patternDefinitions>
+<parsingInstructions>
+    <!-- 1. 拆解標頭與 msg JSON -->
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[^AWS_S3_FIREWALL:phCustId=<_custId:gPatInt>,reptDevIpAddr=<reptDevIpAddr:gPatIpAddr>,reptDevName=<reptDevName:gPatStrComma>,msg=<_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+
+    <setEventAttribute attr="eventType">AWS-NetworkFirewall-Generic</setEventAttribute>
+
+    <!-- 2. 解析 AWS Network Firewall JSON 欄位 -->
+    <collectAndSetAttrByJSON src="$_body">
+        <attrKeyMap attr="hostName" key="firewall_name"/>
+        <attrKeyMap attr="_az" key="availability_zone"/>
+        <attrKeyMap attr="_eventTime" key="event.timestamp"/>
+
+        <!-- Event 共同欄位 -->
+        <attrKeyMap attr="_subEventType" key="event.event_type"/>
+        <attrKeyMap attr="sessionId" key="event.flow_id"/>
+        <attrKeyMap attr="_srcIpAddr" key="event.src_ip"/>
+        <attrKeyMap attr="srcIpPort" key="event.src_port"/>
+        <attrKeyMap attr="_destIpAddr" key="event.dest_ip"/>
+        <attrKeyMap attr="destIpPort" key="event.dest_port"/>
+        <attrKeyMap attr="ipProto" key="event.proto"/>
+        <attrKeyMap attr="appName" key="event.app_proto"/>
+
+        <!-- Netflow 流量統計欄位 -->
+        <attrKeyMap attr="totPkts" key="event.netflow.pkts"/>
+        <attrKeyMap attr="totBytes" key="event.netflow.bytes"/>
+        <attrKeyMap attr="durationMSec" key="event.netflow.age"/>
+        <attrKeyMap attr="errReason" key="event.netflow.reason"/>
+
+        <!-- Alert 規則告警欄位 -->
+        <attrKeyMap attr="fwAction" key="event.alert.action"/>
+        <attrKeyMap attr="ruleId" key="event.alert.signature_id"/>
+        <attrKeyMap attr="fwRule" key="event.alert.signature"/>
+        <attrKeyMap attr="threatCategory" key="event.alert.category"/>
+        <attrKeyMap attr="eventSeverity" key="event.alert.severity"/>
+
+        <!-- TLS 檢測欄位 -->
+        <attrKeyMap attr="destName" key="event.tls.sni"/>
+        <attrKeyMap attr="status" key="event.tls.revocation_check.status"/>
+        <attrKeyMap attr="_tlsAction" key="event.tls.revocation_check.action"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- 3. 轉換 ISO 8601 時間（含時區）為 deviceTime -->
+    <when test="exist _eventTime">
+        <collectFieldsByRegex src="$_eventTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+
+    <!-- 4. 從 availability_zone 提取 awsRegion -->
+    <when test="exist _az">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_az">
+                    <regex><![CDATA[^<awsRegion:patAwsRegion><:patAzLetter>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- 5. 驗證來源與目的 IP 格式 -->
+    <when test="exist _srcIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_srcIpAddr">
+                    <regex><![CDATA[^<srcIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="srcName">$_srcIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <when test="exist _destIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_destIpAddr">
+                    <regex><![CDATA[^<destIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="destName">$_destIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <!-- 6. 標準化協定名稱與應用名稱 -->
+    <when test="exist ipProto">
+        <setEventAttribute attr="ipProto">toUpper($ipProto)</setEventAttribute>
+        <choose>
+            <when test="$ipProto = 'TCP'">
+                <setEventAttribute attr="ipProto">6</setEventAttribute>
+            </when>
+            <when test="$ipProto = 'UDP'">
+                <setEventAttribute attr="ipProto">17</setEventAttribute>
+            </when>
+            <when test="$ipProto = 'ICMP'">
+                <setEventAttribute attr="ipProto">1</setEventAttribute>
+            </when>
+        </choose>
+    </when>
+
+    <when test="exist appName">
+        <setEventAttribute attr="appName">toUpper($appName)</setEventAttribute>
+    </when>
+
+    <!-- 7. 組合 Event Type 與標準化 Action / Status -->
+    <choose>
+        <when test="$_subEventType = 'netflow'">
+            <setEventAttribute attr="eventType">AWS-NetworkFirewall-Netflow</setEventAttribute>
+            <setEventAttribute attr="fwAction">ALLOW</setEventAttribute>
+            <setEventAttribute attr="status">success</setEventAttribute>
+            <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+        </when>
+        <when test="$_subEventType = 'alert'">
+            <choose>
+                <when test="$fwAction = 'blocked'">
+                    <setEventAttribute attr="eventType">AWS-NetworkFirewall-Alert-Blocked</setEventAttribute>
+                    <setEventAttribute attr="fwAction">DROP</setEventAttribute>
+                    <setEventAttribute attr="status">failed</setEventAttribute>
+                </when>
+                <otherwise>
+                    <setEventAttribute attr="eventType">AWS-NetworkFirewall-Alert-Allowed</setEventAttribute>
+                    <setEventAttribute attr="fwAction">ALERT</setEventAttribute>
+                    <setEventAttribute attr="status">success</setEventAttribute>
+                </otherwise>
+            </choose>
+        </when>
+        <when test="$_subEventType = 'tls'">
+            <setEventAttribute attr="eventType">AWS-NetworkFirewall-TLS</setEventAttribute>
+            <when test="exist _tlsAction">
+                <setEventAttribute attr="fwAction">toUpper($_tlsAction)</setEventAttribute>
+            </when>
+        </when>
+        <when test="exist _subEventType">
+            <setEventAttribute attr="eventType">combineMsgId("AWS-NetworkFirewall-", $_subEventType)</setEventAttribute>
+        </when>
+    </choose>
+</parsingInstructions>

@@ -1,0 +1,266 @@
+<eventFormatRecognizer><![CDATA[AWS_S3_LOG_GUARDDUTY]]></eventFormatRecognizer>
+<parsingInstructions>
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[AWS_S3_LOG_GUARDDUTY:phCustId=<_custId:gPatInt>,reptDevIpAddr=<reptDevIpAddr:gPatIpAddr>,reptDevName=<reptDevName:gPatStrComma>,msg=<_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+    <setEventAttribute attr="eventType">AWSS3-GUARDDUTY</setEventAttribute>
+
+    <collectAndSetAttrByJSON src="$_body">
+        <!-- Core Finding Metadata -->
+        <attrKeyMap attr="accountId" key="accountId"/>
+        <attrKeyMap attr="_findingArn" key="arn"/>
+        <attrKeyMap attr="_createdAt" key="createdAt"/>
+        <attrKeyMap attr="description" key="description"/>
+        <attrKeyMap attr="awsRegion" key="region"/>
+        <attrKeyMap attr="eventSeverity" key="severity"/>
+        <attrKeyMap attr="title" key="title"/>
+        <attrKeyMap attr="_findingType" key="type"/>
+        <attrKeyMap attr="_updateTime" key="updatedAt"/>
+
+        <!-- Service & Timing -->
+        <attrKeyMap attr="serviceName" key="service.serviceName"/>
+        <attrKeyMap attr="feature" key="service.featureName"/>
+        <attrKeyMap attr="_actionType" key="service.action.actionType"/>
+        <attrKeyMap attr="_firstSeenTime" key="service.eventFirstSeen"/>
+        <attrKeyMap attr="_lastSeenTime" key="service.eventLastSeen"/>
+        <attrKeyMap attr="_resourceRole" key="resource.resourceRole"/>
+        <attrKeyMap attr="resourceType" key="resource.resourceType"/>
+
+        <!-- IAM / AccessKey (Aligned with CloudTrail) -->
+        <attrKeyMap attr="accessKeyId" key="resource.accessKeyDetails.accessKeyId"/>
+        <attrKeyMap attr="principal" key="resource.accessKeyDetails.principalId"/>
+        <attrKeyMap attr="_akUserName" key="resource.accessKeyDetails.userName"/>
+        <attrKeyMap attr="identityType" key="resource.accessKeyDetails.userType"/>
+        <attrKeyMap attr="identity" key="resource.accessKeyDetails.userIdentity.arn"/>
+
+        <!-- EC2 Instance (Aligned with CloudTrail) -->
+        <attrKeyMap attr="ec2InstanceId" key="resource.instanceDetails.instanceId"/>
+        <attrKeyMap attr="instanceType" key="resource.instanceDetails.instanceType"/>
+        <attrKeyMap attr="imageName" key="resource.instanceDetails.imageId"/>
+        <attrKeyMap attr="ec2CurrentState" key="resource.instanceDetails.instanceState"/>
+        <attrKeyMap attr="vpcId" key="resource.instanceDetails.networkInterfaces[0].vpcId"/>
+        <attrKeyMap attr="_ec2PrivateIp" key="resource.instanceDetails.networkInterfaces[0].privateIpAddress"/>
+        <attrKeyMap attr="_ec2ProfileArn" key="resource.instanceDetails.iamInstanceProfile.arn"/>
+
+        <!-- S3 Bucket / Object & Malware Scan (Aligned with CloudTrail) -->
+        <attrKeyMap attr="bucketName" key="resource.s3BucketDetails[0].name"/>
+        <attrKeyMap attr="_s3BucketArn" key="resource.s3BucketDetails[0].arn"/>
+        <attrKeyMap attr="_s3ObjectArn" key="resource.s3BucketDetails[0].s3ObjectDetails[0].objectArn"/>
+        <attrKeyMap attr="filePath" key="resource.s3BucketDetails[0].s3ObjectDetails[0].key"/>
+        <attrKeyMap attr="sha256" key="resource.s3BucketDetails[0].s3ObjectDetails[0].hash"/>
+        <attrKeyMap attr="virusName" key="service.malwareScanDetails.threats[0].name"/>
+
+        <!-- EKS / Kubernetes / ECS / Container (Aligned with CloudTrail) -->
+        <attrKeyMap attr="cluster" key="resource.eksClusterDetails.name"/>
+        <attrKeyMap attr="_eksClusterArn" key="resource.eksClusterDetails.arn"/>
+        <attrKeyMap attr="_k8sUserName" key="resource.kubernetesDetails.kubernetesUserDetails.username"/>
+        <attrKeyMap attr="cluster" key="resource.ecsClusterDetails.name"/>
+        <attrKeyMap attr="_ecsClusterArn" key="resource.ecsClusterDetails.arn"/>
+        <attrKeyMap attr="task" key="resource.ecsClusterDetails.taskDetails.arn"/>
+        <attrKeyMap attr="osObjName" key="resource.containerDetails.name"/>
+
+        <!-- Lambda / RDS (Aligned with CloudTrail) -->
+        <attrKeyMap attr="_lambdaArn" key="resource.lambdaDetails.functionArn"/>
+        <attrKeyMap attr="_rdsArn" key="resource.rdsDbInstanceDetails.dbInstanceArn"/>
+        <attrKeyMap attr="_rdsDbId" key="resource.rdsDbInstanceDetails.dbInstanceIdentifier"/>
+        <attrKeyMap attr="_rdsLimitlessArn" key="resource.rdsLimitlessDbDetails.dbShardGroupArn"/>
+        <attrKeyMap attr="_rdsUser" key="resource.rdsDbUserDetails.user"/>
+        <attrKeyMap attr="dbName" key="resource.rdsDbUserDetails.database"/>
+        <attrKeyMap attr="authenMethod" key="resource.rdsDbUserDetails.authMethod"/>
+        <attrKeyMap attr="tlsVersion" key="resource.rdsDbUserDetails.ssl"/>
+        <attrKeyMap attr="appName" key="resource.rdsDbUserDetails.application"/>
+
+        <!-- Action / Network / UserAgent (Aligned with CloudTrail) -->
+        <attrKeyMap attr="actionName" key="service.action.awsApiCallAction.api"/>
+        <attrKeyMap attr="appClientVersion" key="service.additionalInfo.userAgent.fullUserAgent"/>
+        <attrKeyMap attr="destName" key="service.action.dnsRequestAction.domain"/>
+        <attrKeyMap attr="_srcIpAddr" key="service.action.awsApiCallAction.remoteIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="_netRemoteIp" key="service.action.networkConnectionAction.remoteIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="_probeRemoteIp" key="service.action.portProbeAction.portProbeDetails[0].remoteIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="_rdsRemoteIp" key="service.action.rdsLoginAttemptAction.remoteIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="_k8sRemoteIp" key="service.action.kubernetesApiCallAction.remoteIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="_destIpAddr" key="service.action.networkConnectionAction.localIpDetails.ipAddressV4"/>
+        <attrKeyMap attr="srcIpPort" key="service.action.networkConnectionAction.remotePortDetails.port"/>
+        <attrKeyMap attr="destIpPort" key="service.action.networkConnectionAction.localPortDetails.port"/>
+        <attrKeyMap attr="_ipProto" key="service.action.networkConnectionAction.protocol"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- EventType Normalization -->
+    <when test="exist _findingType">
+        <setEventAttribute attr="eventType">combineMsgId("AWS_GUARDDUTY-", $_findingType)</setEventAttribute>
+    </when>
+
+    <!-- User Normalization (Aligned with CloudTrail: user) -->
+    <choose>
+        <when test="exist _akUserName">
+            <setEventAttribute attr="user">$_akUserName</setEventAttribute>
+        </when>
+        <when test="exist _k8sUserName">
+            <setEventAttribute attr="user">$_k8sUserName</setEventAttribute>
+        </when>
+        <when test="exist _rdsUser">
+            <setEventAttribute attr="user">$_rdsUser</setEventAttribute>
+        </when>
+    </choose>
+
+    <!-- Identity Fallback (Aligned with CloudTrail: identity) -->
+    <choose>
+        <when test="exist identity"/>
+        <when test="exist _ec2ProfileArn">
+            <setEventAttribute attr="identity">$_ec2ProfileArn</setEventAttribute>
+        </when>
+        <when test="exist principal">
+            <setEventAttribute attr="identity">$principal</setEventAttribute>
+        </when>
+    </choose>
+
+    <!-- Resource Name Normalization (Aligned with CloudTrail: resourceName) -->
+    <choose>
+        <when test="exist _s3ObjectArn">
+            <setEventAttribute attr="resourceName">$_s3ObjectArn</setEventAttribute>
+        </when>
+        <when test="exist _s3BucketArn">
+            <setEventAttribute attr="resourceName">$_s3BucketArn</setEventAttribute>
+        </when>
+        <when test="exist _eksClusterArn">
+            <setEventAttribute attr="resourceName">$_eksClusterArn</setEventAttribute>
+        </when>
+        <when test="exist _ecsClusterArn">
+            <setEventAttribute attr="resourceName">$_ecsClusterArn</setEventAttribute>
+        </when>
+        <when test="exist _lambdaArn">
+            <setEventAttribute attr="resourceName">$_lambdaArn</setEventAttribute>
+        </when>
+        <when test="exist _rdsArn">
+            <setEventAttribute attr="resourceName">$_rdsArn</setEventAttribute>
+        </when>
+        <when test="exist _rdsLimitlessArn">
+            <setEventAttribute attr="resourceName">$_rdsLimitlessArn</setEventAttribute>
+        </when>
+        <when test="exist ec2InstanceId">
+            <setEventAttribute attr="resourceName">$ec2InstanceId</setEventAttribute>
+        </when>
+        <when test="exist accessKeyId">
+            <setEventAttribute attr="resourceName">$accessKeyId</setEventAttribute>
+        </when>
+        <when test="exist _findingArn">
+            <setEventAttribute attr="resourceName">$_findingArn</setEventAttribute>
+        </when>
+    </choose>
+
+    <!-- Destination Name & Action Fallbacks -->
+    <when test="not_exist destName">
+        <when test="exist _rdsDbId">
+            <setEventAttribute attr="destName">$_rdsDbId</setEventAttribute>
+        </when>
+    </when>
+    <when test="not_exist actionName">
+        <when test="exist _actionType">
+            <setEventAttribute attr="actionName">$_actionType</setEventAttribute>
+        </when>
+    </when>
+
+    <!-- Source IP Consolidation & Validation -->
+    <choose>
+        <when test="exist _srcIpAddr"/>
+        <when test="exist _netRemoteIp">
+            <setEventAttribute attr="_srcIpAddr">$_netRemoteIp</setEventAttribute>
+        </when>
+        <when test="exist _probeRemoteIp">
+            <setEventAttribute attr="_srcIpAddr">$_probeRemoteIp</setEventAttribute>
+        </when>
+        <when test="exist _rdsRemoteIp">
+            <setEventAttribute attr="_srcIpAddr">$_rdsRemoteIp</setEventAttribute>
+        </when>
+        <when test="exist _k8sRemoteIp">
+            <setEventAttribute attr="_srcIpAddr">$_k8sRemoteIp</setEventAttribute>
+        </when>
+    </choose>
+    <when test="exist _srcIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_srcIpAddr">
+                    <regex><![CDATA[^<srcIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="srcName">$_srcIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <!-- Destination / Host IP Validation -->
+    <when test="exist _destIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_destIpAddr">
+                    <regex><![CDATA[^<destIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+    <when test="exist _ec2PrivateIp">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_ec2PrivateIp">
+                    <regex><![CDATA[^<hostIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- Protocol Normalization -->
+    <when test="exist _ipProto">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_ipProto">
+                    <regex><![CDATA[^<ipProto:gPatInt>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <choose>
+                    <when test="$_ipProto = 'TCP'">
+                        <setEventAttribute attr="ipProto">6</setEventAttribute>
+                    </when>
+                    <when test="$_ipProto = 'UDP'">
+                        <setEventAttribute attr="ipProto">17</setEventAttribute>
+                    </when>
+                    <when test="$_ipProto = 'ICMP'">
+                        <setEventAttribute attr="ipProto">1</setEventAttribute>
+                    </when>
+                </choose>
+            </default>
+        </switch>
+    </when>
+
+    <!-- Timestamp Normalization with Timezone (Mandatory deviceTime) -->
+    <when test="exist _firstSeenTime">
+        <collectFieldsByRegex src="$_firstSeenTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="firstSeenTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <when test="exist _lastSeenTime">
+        <collectFieldsByRegex src="$_lastSeenTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="lastSeenTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <when test="exist _updateTime">
+        <collectFieldsByRegex src="$_updateTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="updateTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+        <setEventAttribute attr="deviceTime">$updateTime</setEventAttribute>
+    </when>
+    <when test="not_exist deviceTime">
+        <when test="exist _createdAt">
+            <collectFieldsByRegex src="$_createdAt">
+                <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
+            </collectFieldsByRegex>
+            <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+        </when>
+    </when>
+</parsingInstructions>

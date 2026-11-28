@@ -1,0 +1,147 @@
+<eventFormatRecognizer><![CDATA[^AWS_S3_WAF:]]></eventFormatRecognizer>
+<patternDefinitions>
+    <pattern name="patARNDelimiter"><![CDATA[[^:/]+]]></pattern>
+    <pattern name="patExceptColon"><![CDATA[[^:]*]]></pattern>
+</patternDefinitions>
+<parsingInstructions>
+    <!-- 1. 拆解標頭與 msg JSON -->
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[^AWS_S3_WAF:phCustId=<_custId:gPatInt>,reptDevIpAddr=<reptDevIpAddr:gPatIpAddr>,reptDevName=<reptDevName:gPatStrComma>,msg=<_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+
+    <setEventAttribute attr="eventType">AWS-WAF-Generic</setEventAttribute>
+
+    <!-- 2. 解析 AWS WAF JSON 欄位 -->
+    <collectAndSetAttrByJSON src="$_body">
+        <attrKeyMap attr="_eventTime" key="timestamp"/>
+        <attrKeyMap attr="_webaclArn" key="webaclId"/>
+        <attrKeyMap attr="fwRule" key="terminatingRuleId"/>
+        <attrKeyMap attr="actionName" key="terminatingRuleType"/>
+        <attrKeyMap attr="fwAction" key="action"/>
+        <attrKeyMap attr="serviceName" key="httpSourceName"/>
+        <attrKeyMap attr="resourceId" key="httpSourceId"/>
+
+        <!-- HTTP Request 明細 -->
+        <attrKeyMap attr="_srcIpAddr" key="httpRequest.clientIp"/>
+        <attrKeyMap attr="srcGeoCountry" key="httpRequest.country"/>
+        <attrKeyMap attr="uriStem" key="httpRequest.uri"/>
+        <attrKeyMap attr="uriQuery" key="httpRequest.args"/>
+        <attrKeyMap attr="httpMethod" key="httpRequest.httpMethod"/>
+        <attrKeyMap attr="httpVersion" key="httpRequest.httpVersion"/>
+        <attrKeyMap attr="sessionId" key="httpRequest.requestId"/>
+
+        <!-- 攻擊特徵與 Managed Rule Group 細項 -->
+        <attrKeyMap attr="threatCategory" key="terminatingRuleMatchDetails[0].conditionType"/>
+        <attrKeyMap attr="details" key="terminatingRuleMatchDetails[0].matchedData[0]"/>
+        <attrKeyMap attr="ruleName" key="ruleGroupList[0].terminatingRule.ruleId"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- 3. 比照官方 AWS WAF Parser 使用 divide($_timestamp, 1000) 轉換毫秒 Epoch -->
+    <when test="exist _eventTime">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_eventTime">
+                    <regex><![CDATA[^<_timestamp:gPatInt>$]]></regex>
+                </collectFieldsByRegex>
+                <setEventAttribute attr="eventTime">divide($_timestamp, 1000)</setEventAttribute>
+                <setEventAttribute attr="deviceTime">$eventTime</setEventAttribute>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- 4. 拆解 webaclId ARN，提取 awsRegion、accountId 與 policyName -->
+    <when test="exist _webaclArn">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_webaclArn">
+                    <regex><![CDATA[^arn:<:patExceptColon>:wafv2:<awsRegion:patExceptColon>:<accountId:patExceptColon>:<:patARNDelimiter>\/webacl\/<policyName:patARNDelimiter>\/<:gPatMesgBody>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="policyName">$_webaclArn</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <!-- 5. 驗證來源 IP 格式 -->
+    <when test="exist _srcIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_srcIpAddr">
+                    <regex><![CDATA[^<srcIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="srcName">$_srcIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <!-- 6. 從 httpRequest.headers 陣列提取關鍵標頭 -->
+    <switch>
+        <case>
+            <collectFieldsByRegex src="$_body">
+                <regex><![CDATA["name"\s*:\s*"Host"\s*,\s*"value"\s*:\s*"<destName:gPatStrDQ>"]]></regex>
+            </collectFieldsByRegex>
+        </case>
+        <default/>
+    </switch>
+    <switch>
+        <case>
+            <collectFieldsByRegex src="$_body">
+                <regex><![CDATA["name"\s*:\s*"User-Agent"\s*,\s*"value"\s*:\s*"<appClientVersion:gPatStrDQ>"]]></regex>
+            </collectFieldsByRegex>
+        </case>
+        <default/>
+    </switch>
+    <switch>
+        <case>
+            <collectFieldsByRegex src="$_body">
+                <regex><![CDATA["name"\s*:\s*"x-amzn-tls-version"\s*,\s*"value"\s*:\s*"<tlsVersion:gPatStrDQ>"]]></regex>
+            </collectFieldsByRegex>
+        </case>
+        <default/>
+    </switch>
+    <switch>
+        <case>
+            <collectFieldsByRegex src="$_body">
+                <regex><![CDATA["name"\s*:\s*"x-amzn-tls-cipher-suite"\s*,\s*"value"\s*:\s*"<tlsCipher:gPatStrDQ>"]]></regex>
+            </collectFieldsByRegex>
+        </case>
+        <default/>
+    </switch>
+    <switch>
+        <case>
+            <collectFieldsByRegex src="$_body">
+                <regex><![CDATA["name"\s*:\s*"X-Amzn-Trace-Id"\s*,\s*"value"\s*:\s*"<correlationId:gPatStrDQ>"]]></regex>
+            </collectFieldsByRegex>
+        </case>
+        <default/>
+    </switch>
+
+    <!-- 7. 標準化 serviceName 與組合 Event Type -->
+    <when test="exist serviceName">
+        <setEventAttribute attr="serviceName">toUpper($serviceName)</setEventAttribute>
+    </when>
+
+    <choose>
+        <when test="exist fwAction">
+            <setEventAttribute attr="eventType">combineMsgId("AWS-WAF-", $fwAction)</setEventAttribute>
+            <choose>
+                <when test="$fwAction = 'BLOCK'">
+                    <setEventAttribute attr="status">failed</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">5</setEventAttribute>
+                </when>
+                <when test="$fwAction = 'ALLOW'">
+                    <setEventAttribute attr="status">success</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+                </when>
+                <otherwise>
+                    <setEventAttribute attr="status">unknown</setEventAttribute>
+                    <setEventAttribute attr="eventSeverity">3</setEventAttribute>
+                </otherwise>
+            </choose>
+        </when>
+    </choose>
+</parsingInstructions>

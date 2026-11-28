@@ -1,0 +1,550 @@
+<patternDefinitions>
+    <pattern name="patStrDoubleQuoted"><![CDATA[[^"]*]]></pattern>
+    <pattern name="patStrFwdSlash"><![CDATA[[^/]*]]></pattern>
+</patternDefinitions>
+<eventFormatRecognizer><![CDATA[\[AWS_SECURITY_HUB_EVENT_DATA\] = \s*]]></eventFormatRecognizer>
+<parsingInstructions>
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[\[AWS_SECURITY_HUB_EVENT_DATA\] = <_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+    <setEventAttribute attr="extEventRecvProto">AWS_HUB_SDK</setEventAttribute>
+    <setEventAttribute attr="eventType">AWS-Hub-Generic-Event</setEventAttribute>
+
+    <collectAndSetAttrByJSON src="$_body">
+        <attrKeyMap attr="phCustId" key="phCustId"/>
+        <attrKeyMap attr="reptDevName" key="serverName"/>
+        <attrKeyMap attr="reptDevIpAddr" key="serverIp"/>
+
+        <!-- Core SecurityFinding fields (Aligned with CloudTrail & GuardDuty) -->
+        <attrKeyMap attr="accountId" key="AwsAccountId"/>
+        <attrKeyMap attr="accountName" key="AwsAccountName"/>
+        <attrKeyMap attr="_topRegion" key="Region"/>
+        <attrKeyMap attr="_createTime" key="CreatedAt"/>
+        <attrKeyMap attr="msg" key="Description"/>
+        <attrKeyMap attr="description" key="Description"/>
+        <attrKeyMap attr="generatorId" key="GeneratorId"/>
+        <attrKeyMap attr="msgId" key="Id"/>
+        <attrKeyMap attr="eventSource" key="ProductArn"/>
+        <attrKeyMap attr="threatSource" key="ProductName"/>
+        <attrKeyMap attr="title" key="Title"/>
+        <attrKeyMap attr="_updateTime" key="UpdatedAt"/>
+        <attrKeyMap attr="_firstSeenTime" key="FirstObservedAt"/>
+        <attrKeyMap attr="_lastSeenTime" key="LastObservedAt"/>
+        <attrKeyMap attr="policyName" key="Compliance.SecurityControlId"/>
+
+        <!-- Resources (Aligned with CloudTrail & GuardDuty) -->
+        <attrKeyMap attr="awsRegion" key="Resources[0].Region"/>
+        <attrKeyMap attr="tagName" key="Resources[0].Tags.Name"/>
+        <attrKeyMap attr="resourceType" key="Resources[0].Type"/>
+        <attrKeyMap attr="resourceId" key="Resources[0].Id"/>
+        <attrKeyMap attr="resourceName" key="Resources[0].Id"/>
+
+        <!-- EC2 Instance -->
+        <attrKeyMap attr="appRole" key="Resources[0].Details.AwsEc2Instance.IamInstanceProfileArn"/>
+        <attrKeyMap attr="_ec2ProfileArn" key="Resources[0].Details.AwsEc2Instance.IamInstanceProfileArn"/>
+        <attrKeyMap attr="hostIpAddr" key="Resources[0].Details.AwsEc2Instance.IpV4Addresses[0]"/>
+        <attrKeyMap attr="_hostIPList" key="Resources[0].Details.AwsEc2Instance.IpV4Addresses"/>
+        <attrKeyMap attr="subnetId" key="Resources[0].Details.AwsEc2Instance.SubnetId"/>
+        <attrKeyMap attr="instanceType" key="Resources[0].Details.AwsEc2Instance.Type"/>
+        <attrKeyMap attr="vpcId" key="Resources[0].Details.AwsEc2Instance.VpcId"/>
+
+        <!-- IAM / AccessKey / User / Role (Aligned with CloudTrail) -->
+        <attrKeyMap attr="user" key="Resources[0].Details.AwsIamAccessKey.UserName"/>
+        <attrKeyMap attr="_iamPrincipalName" key="Resources[0].Details.AwsIamAccessKey.PrincipalName"/>
+        <attrKeyMap attr="principal" key="Resources[0].Details.AwsIamAccessKey.PrincipalId"/>
+        <attrKeyMap attr="identityType" key="Resources[0].Details.AwsIamAccessKey.PrincipalType"/>
+        <attrKeyMap attr="_iamUserName" key="Resources[0].Details.AwsIamUser.UserName"/>
+        <attrKeyMap attr="_iamUserId" key="Resources[0].Details.AwsIamUser.UserId"/>
+        <attrKeyMap attr="role" key="Resources[0].Details.AwsIamRole.RoleName"/>
+
+        <!-- EKS / ECS / RDS / Lambda -->
+        <attrKeyMap attr="cluster" key="Resources[0].Details.AwsEksCluster.Name"/>
+        <attrKeyMap attr="_ecsClusterArn" key="Resources[0].Details.AwsEcsCluster.ClusterArn"/>
+        <attrKeyMap attr="_rdsDbId" key="Resources[0].Details.AwsRdsDbInstance.DBInstanceIdentifier"/>
+        <attrKeyMap attr="dbName" key="Resources[0].Details.AwsRdsDbInstance.DBName"/>
+        <attrKeyMap attr="appName" key="Resources[0].Details.AwsLambdaFunction.FunctionName"/>
+
+        <!-- Types & Severity & Remediation -->
+        <attrKeyMap attr="_types" key="Types[0]"/>
+        <attrKeyMap attr="_severity" key="Severity.Normalized"/>
+        <attrKeyMap attr="_severity" key="Severity.Label"/>
+        <attrKeyMap attr="remedyAction" key="Remediation.Recommendation.Text"/>
+        <attrKeyMap attr="remedyURL" key="Remediation.Recommendation.Url"/>
+        <attrKeyMap attr="confidence" key="Confidence"/>
+        <attrKeyMap attr="clientReputationScore" key="Criticality"/>
+
+        <!-- New ASFF Action object (replaces retired Network object) -->
+        <attrKeyMap attr="activityType" key="Action.ActionType"/>
+        <attrKeyMap attr="actionName" key="Action.AwsApiCallAction.Api"/>
+        <attrKeyMap attr="destDomain" key="Action.DnsRequestAction.Domain"/>
+        <attrKeyMap attr="_direction" key="Action.NetworkConnectionAction.ConnectionDirection"/>
+        <attrKeyMap attr="_ipProto" key="Action.NetworkConnectionAction.Protocol"/>
+        <attrKeyMap attr="_blocked" key="Action.NetworkConnectionAction.Blocked"/>
+        <attrKeyMap attr="_localIp" key="Action.NetworkConnectionAction.LocalIpDetails.IpAddressV4"/>
+        <attrKeyMap attr="_localPort" key="Action.NetworkConnectionAction.LocalPortDetails.Port"/>
+        <attrKeyMap attr="_localPortName" key="Action.NetworkConnectionAction.LocalPortDetails.PortName"/>
+        <attrKeyMap attr="_remoteIp" key="Action.NetworkConnectionAction.RemoteIpDetails.IpAddressV4"/>
+        <attrKeyMap attr="_remoteIpPort" key="Action.NetworkConnectionAction.RemotePortDetails.Port"/>
+        <attrKeyMap attr="_remoteIpPortName" key="Action.NetworkConnectionAction.RemotePortDetails.PortName"/>
+        <attrKeyMap attr="_remoteIp" key="Action.AwsApiCallAction.RemoteIpDetails.IpAddressV4"/>
+        <attrKeyMap attr="_remoteIp" key="Action.PortProbeAction.PortProbeDetails[0].RemoteIpDetails.IpAddressV4"/>
+        <attrKeyMap attr="_localIp" key="Action.PortProbeAction.PortProbeDetails[0].LocalIpDetails.IpAddressV4"/>
+        <attrKeyMap attr="_localPort" key="Action.PortProbeAction.PortProbeDetails[0].LocalPortDetails.Port"/>
+        <attrKeyMap attr="_blocked" key="Action.PortProbeAction.Blocked"/>
+
+        <!-- Legacy Network (Retired in ASFF) & Process & ThreatIntel -->
+        <attrKeyMap attr="destDomain" key="Network.DestinationDomain"/>
+        <attrKeyMap attr="_destIpAddr1" key="Network.DestinationIpV4"/>
+        <attrKeyMap attr="_destIpAddr2" key="Network.DestinationIpV6"/>
+        <attrKeyMap attr="destIpPort" key="Network.DestinationPort"/>
+        <attrKeyMap attr="direction" key="Network.Direction"/>
+        <attrKeyMap attr="_ipProto" key="Network.Protocol"/>
+        <attrKeyMap attr="srcDomain" key="Network.SourceDomain"/>
+        <attrKeyMap attr="_srcIpAddr1" key="Network.SourceIpV4"/>
+        <attrKeyMap attr="_srcIpAddr2" key="Network.SourceIpV6"/>
+        <attrKeyMap attr="srcMACAddr" key="Network.SourceMac"/>
+        <attrKeyMap attr="srcIpPort" key="Network.SourcePort"/>
+        <attrKeyMap attr="procName" key="Process.Name"/>
+        <attrKeyMap attr="parentProcId" key="Process.ParentPid"/>
+        <attrKeyMap attr="procPath" key="Process.Path"/>
+        <attrKeyMap attr="procId" key="Process.Pid"/>
+        <attrKeyMap attr="threatSource" key="ThreatIntelIndicators.Source"/>
+        <attrKeyMap attr="threatType" key="ThreatIntelIndicators.Type"/>
+        <attrKeyMap attr="threatValue" key="ThreatIntelIndicators.Value"/>
+        <attrKeyMap attr="threatCategory" key="ThreatIntelIndicators.Category"/>
+        <attrKeyMap attr="infoURL" key="ThreatIntelIndicators.SourceUrl"/>
+        <attrKeyMap attr="resoStatus" key="VerificationState"/>
+        <attrKeyMap attr="virusName" key="Malware[0].Name"/>
+        <attrKeyMap attr="virusType" key="Malware[0].Type"/>
+        <attrKeyMap attr="virusQuarantStatus" key="Malware[0].State"/>
+        <attrKeyMap attr="fileName" key="Malware[0].Name"/>
+        <attrKeyMap attr="filePath" key="Malware[0].Path"/>
+        <attrKeyMap attr="complianceStatus" key="Compliance.Status"/>
+
+        <!-- Product Fields -->
+        <attrKeyMap attr="_productFields" key="ProductFields"/>
+        <attrKeyMap attr="_ipProto" key="ProductFields.action/networkConnectionAction/protocol"/>
+        <attrKeyMap attr="_blocked" key="ProductFields.action/networkConnectionAction/blocked"/>
+        <attrKeyMap attr="_direction" key="ProductFields.action/networkConnectionAction/connectionDirection"/>
+        <attrKeyMap attr="_localIp" key="ProductFields.action/networkConnectionAction/localPortDetails/ipAddressV4"/>
+        <attrKeyMap attr="_localPort" key="ProductFields.action/networkConnectionAction/localPortDetails/port"/>
+        <attrKeyMap attr="_localPortName" key="ProductFields.action/networkConnectionAction/localPortDetails/portName"/>
+        <attrKeyMap attr="_remoteIp" key="ProductFields.action/networkConnectionAction/remoteIpDetails/ipAddressV4"/>
+        <attrKeyMap attr="_remoteIpPort" key="ProductFields.action/networkConnectionAction/remotePortDetails/port"/>
+        <attrKeyMap attr="_remoteIpPortName" key="ProductFields.action/networkConnectionAction/remotePortDetails/portName"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- Region Fallback -->
+    <when test="not_exist awsRegion">
+        <when test="exist _topRegion">
+            <setEventAttribute attr="awsRegion">$_topRegion</setEventAttribute>
+        </when>
+    </when>
+
+    <!-- Get eventSource short name & align serviceName -->
+    <when test="exist eventSource">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$eventSource">
+                    <regex><![CDATA[^.*/<eventSource:patStrFwdSlash>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <setEventAttribute attr="serviceName">$eventSource</setEventAttribute>
+    </when>
+
+    <!-- Extract ProductFields extras -->
+    <when test="exist _productFields">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/ProductName"\s*:\s*"<threatSource:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA["Resources:0/Id"\s*:\s*"<_pfResourceArn:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/action/actionType"\s*:\s*"<activityType:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/connectionDirection"\s*:\s*"<direction:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/protocol"\s*:\s*"<_ipProto:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/blocked"\s*:\s*"<_blocked:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/localPortDetails/ipAddressV4"\s*:\s*"<_localIp:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/localPortDetails/port"\s*:\s*"<_localPort:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/localPortDetails/portName"\s*:\s*"<_localPortName:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/remoteIpDetails/ipAddressV4"\s*:\s*"<_remoteIp:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/remotePortDetails/port"\s*:\s*"<_remoteIpPort:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*/remotePortDetails/portName"\s*:\s*"<_remoteIpPortName:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*"attributes:\d+/key"\s*:\s*"PORT"\s*,\s*"attributes:\d+/value"\s*:\s*"<destIpPort:gPatInt>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_productFields">
+                    <regex><![CDATA[.*"attributes:\d+/key"\s*:\s*"PROTOCOL"\s*,\s*"attributes:\d+/value"\s*:\s*"<destProto:patStrDoubleQuoted>"]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <!-- User / Principal / Identity Alignment -->
+    <choose>
+        <when test="exist user"/>
+        <when test="exist _iamPrincipalName">
+            <setEventAttribute attr="user">$_iamPrincipalName</setEventAttribute>
+        </when>
+        <when test="exist _iamUserName">
+            <setEventAttribute attr="user">$_iamUserName</setEventAttribute>
+        </when>
+    </choose>
+    <when test="not_exist principal">
+        <when test="exist _iamUserId">
+            <setEventAttribute attr="principal">$_iamUserId</setEventAttribute>
+        </when>
+    </when>
+    <choose>
+        <when test="exist _ec2ProfileArn">
+            <setEventAttribute attr="identity">$_ec2ProfileArn</setEventAttribute>
+        </when>
+        <when test="exist _pfResourceArn">
+            <setEventAttribute attr="identity">$_pfResourceArn</setEventAttribute>
+        </when>
+        <when test="exist principal">
+            <setEventAttribute attr="identity">$principal</setEventAttribute>
+        </when>
+    </choose>
+
+    <!-- Domain / Cluster / DB Alignment -->
+    <when test="exist destDomain">
+        <setEventAttribute attr="destName">$destDomain</setEventAttribute>
+    </when>
+    <when test="not_exist destName">
+        <when test="exist _rdsDbId">
+            <setEventAttribute attr="destName">$_rdsDbId</setEventAttribute>
+        </when>
+    </when>
+    <when test="exist srcDomain">
+        <setEventAttribute attr="srcName">$srcDomain</setEventAttribute>
+    </when>
+    <when test="not_exist cluster">
+        <when test="exist _ecsClusterArn">
+            <switch>
+                <case>
+                    <collectFieldsByRegex src="$_ecsClusterArn">
+                        <regex><![CDATA[^.*/<cluster:patStrFwdSlash>$]]></regex>
+                    </collectFieldsByRegex>
+                </case>
+                <default/>
+            </switch>
+        </when>
+    </when>
+
+    <!-- Shorten resourceId while keeping full ARN in resourceName -->
+    <choose>
+        <when test="not_exist resourceId"/>
+        <when test="not_exist resourceType"/>
+        <when test="$resourceType = 'AwsEc2Instance'">
+            <switch>
+                <case>
+                    <collectFieldsByRegex src="$resourceId">
+                        <regex><![CDATA[^.*/<ec2InstanceId:patStrFwdSlash>$]]></regex>
+                    </collectFieldsByRegex>
+                    <setEventAttribute attr="resourceId">$ec2InstanceId</setEventAttribute>
+                </case>
+                <default/>
+            </switch>
+        </when>
+        <otherwise>
+            <switch>
+                <case>
+                    <collectFieldsByRegex src="$resourceId">
+                        <regex><![CDATA[^<:patStrFwdSlash>/<resourceId:gPatStr>$]]></regex>
+                    </collectFieldsByRegex>
+                </case>
+                <default/>
+            </switch>
+        </otherwise>
+    </choose>
+
+    <when test="exist _hostIPList">
+        <setEventAttribute attr="hostIpAddrList">replaceStringByRegex($_hostIPList,"[\[\] \"\n\t]+", "")</setEventAttribute>
+    </when>
+
+    <!-- Severity Mapping -->
+    <choose>
+        <when test="not_exist _severity">
+            <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+        </when>
+        <when test="$_severity = 'INFORMATIONAL'">
+            <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+        </when>
+        <when test="$_severity = 'LOW'">
+            <setEventAttribute attr="eventSeverity">2</setEventAttribute>
+        </when>
+        <when test="$_severity = 'MEDIUM'">
+            <setEventAttribute attr="eventSeverity">5</setEventAttribute>
+        </when>
+        <when test="$_severity = 'HIGH'">
+            <setEventAttribute attr="eventSeverity">9</setEventAttribute>
+        </when>
+        <when test="$_severity = 'CRITICAL'">
+            <setEventAttribute attr="eventSeverity">10</setEventAttribute>
+        </when>
+        <when test="matches($_severity, '^[1-9]$|[1-3][0-9]$')">
+            <setEventAttribute attr="eventSeverity">3</setEventAttribute>
+        </when>
+        <when test="matches($_severity, '^[4-6][0-9]$')">
+            <setEventAttribute attr="eventSeverity">5</setEventAttribute>
+        </when>
+        <when test="matches($_severity, '^[7-8][0-9]$')">
+            <setEventAttribute attr="eventSeverity">7</setEventAttribute>
+        </when>
+        <when test="matches($_severity, '^100|9[0-9]$')">
+            <setEventAttribute attr="eventSeverity">9</setEventAttribute>
+        </when>
+        <otherwise>
+            <setEventAttribute attr="eventSeverity">1</setEventAttribute>
+        </otherwise>
+    </choose>
+
+    <when test="exist _ipProto">
+        <setEventAttribute attr="ipProto">convertStrToIntIpProto($_ipProto)</setEventAttribute>
+    </when>
+
+    <!-- Fixed variable name: _blocked -->
+    <choose>
+        <when test="not_exist _blocked"/>
+        <when test="$_blocked = 'true'">
+            <setEventAttribute attr="eventAction">1</setEventAttribute>
+        </when>
+        <otherwise>
+            <setEventAttribute attr="eventAction">0</setEventAttribute>
+        </otherwise>
+    </choose>
+
+    <choose>
+        <when test="exist _srcIpAddr1">
+            <setEventAttribute attr="srcIpAddr">$_srcIpAddr1</setEventAttribute>
+        </when>
+        <when test="exist _srcIpAddr2">
+            <setEventAttribute attr="srcIpAddr">$_srcIpAddr2</setEventAttribute>
+        </when>
+    </choose>
+    <choose>
+        <when test="exist _destIpAddr1">
+            <setEventAttribute attr="destIpAddr">$_destIpAddr1</setEventAttribute>
+        </when>
+        <when test="exist _destIpAddr2">
+            <setEventAttribute attr="destIpAddr">$_destIpAddr2</setEventAttribute>
+        </when>
+    </choose>
+
+    <choose>
+        <when test="not_exist activityType"/>
+        <when test="$activityType = 'DNS_REQUEST'">
+            <when test="exist hostIpAddr">
+                <setEventAttribute attr="srcIpAddr">$hostIpAddr</setEventAttribute>
+            </when>
+        </when>
+        <when test="$activityType IN 'AWS_API_CALL, PORT_PROBE'">
+            <setEventAttribute attr="_direction">INBOUND</setEventAttribute>
+            <when test="exist hostIpAddr">
+                <setEventAttribute attr="destIpAddr">$hostIpAddr</setEventAttribute>
+            </when>
+        </when>
+    </choose>
+
+    <choose>
+        <when test="exist direction"/>
+        <when test="exist _direction">
+            <setEventAttribute attr="direction">$_direction</setEventAttribute>
+        </when>
+    </choose>
+
+    <choose>
+        <when test="not_exist direction">
+            <when test="exist _localIp"><setEventAttribute attr="srcIpAddr">$_localIp</setEventAttribute></when>
+            <when test="exist _localPort"><setEventAttribute attr="srcIpPort">$_localPort</setEventAttribute></when>
+            <when test="exist _localPortName"><setEventAttribute attr="srcProto">$_localPortName</setEventAttribute></when>
+            <when test="exist _remoteIp"><setEventAttribute attr="destIpAddr">$_remoteIp</setEventAttribute></when>
+            <when test="exist _remoteIpPort"><setEventAttribute attr="destIpPort">$_remoteIpPort</setEventAttribute></when>
+            <when test="exist _remoteIpPortName"><setEventAttribute attr="destProto">$_remoteIpPortName</setEventAttribute></when>
+        </when>
+        <when test="$direction = 'INBOUND'">
+            <when test="exist _localIp"><setEventAttribute attr="destIpAddr">$_localIp</setEventAttribute></when>
+            <when test="exist _localPort"><setEventAttribute attr="destIpPort">$_localPort</setEventAttribute></when>
+            <when test="exist _localPortName"><setEventAttribute attr="destProto">$_localPortName</setEventAttribute></when>
+            <when test="exist _remoteIp"><setEventAttribute attr="srcIpAddr">$_remoteIp</setEventAttribute></when>
+            <when test="exist _remoteIpPort"><setEventAttribute attr="srcIpPort">$_remoteIpPort</setEventAttribute></when>
+            <when test="exist _remoteIpPortName"><setEventAttribute attr="srcProto">$_remoteIpPortName</setEventAttribute></when>
+        </when>
+        <otherwise>
+            <when test="exist _localIp"><setEventAttribute attr="srcIpAddr">$_localIp</setEventAttribute></when>
+            <when test="exist _localPort"><setEventAttribute attr="srcIpPort">$_localPort</setEventAttribute></when>
+            <when test="exist _localPortName"><setEventAttribute attr="srcProto">$_localPortName</setEventAttribute></when>
+            <when test="exist _remoteIp"><setEventAttribute attr="destIpAddr">$_remoteIp</setEventAttribute></when>
+            <when test="exist _remoteIpPort"><setEventAttribute attr="destIpPort">$_remoteIpPort</setEventAttribute></when>
+            <when test="exist _remoteIpPortName"><setEventAttribute attr="destProto">$_remoteIpPortName</setEventAttribute></when>
+        </otherwise>
+    </choose>
+
+    <!-- Timestamp Normalization (Aligned with GuardDuty: UpdatedAt -> deviceTime) -->
+    <when test="exist _firstSeenTime">
+        <collectFieldsByRegex src="$_firstSeenTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d{3})?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="firstSeenTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <when test="exist _lastSeenTime">
+        <collectFieldsByRegex src="$_lastSeenTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d{3})?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="lastSeenTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <when test="exist _createTime">
+        <collectFieldsByRegex src="$_createTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d{3})?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="createTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <when test="exist _updateTime">
+        <collectFieldsByRegex src="$_updateTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d{3})?<_tz:gPatTimeZone>]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="updateTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
+    </when>
+    <choose>
+        <when test="exist updateTime">
+            <setEventAttribute attr="deviceTime">$updateTime</setEventAttribute>
+        </when>
+        <when test="exist lastSeenTime">
+            <setEventAttribute attr="deviceTime">$lastSeenTime</setEventAttribute>
+        </when>
+        <when test="exist firstSeenTime">
+            <setEventAttribute attr="deviceTime">$firstSeenTime</setEventAttribute>
+        </when>
+        <when test="exist createTime">
+            <setEventAttribute attr="deviceTime">$createTime</setEventAttribute>
+        </when>
+    </choose>
+
+    <!-- EventType Normalization (supports 1, 2, or 3 segments in Types[0]) -->
+    <when test="exist _types">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_types">
+                    <regex><![CDATA[^<namespace:patStrFwdSlash>/<categoryType:patStrFwdSlash>/<classifier:patStrFwdSlash>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <case>
+                <collectFieldsByRegex src="$_types">
+                    <regex><![CDATA[^<namespace:patStrFwdSlash>/<categoryType:patStrFwdSlash>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <case>
+                <collectFieldsByRegex src="$_types">
+                    <regex><![CDATA[^<namespace:patStrFwdSlash>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+    <when test="exist namespace">
+        <setEventAttribute attr="eventType">combineMsgId("AWS-Hub-", $namespace)</setEventAttribute>
+    </when>
+    <choose>
+        <when test="not_exist categoryType"/>
+        <when test="$categoryType = 'Industry and Regulatory Standards'"/>
+        <otherwise>
+            <setEventAttribute attr="eventType">combineMsgId($eventType,"-", $categoryType)</setEventAttribute>
+        </otherwise>
+    </choose>
+    <when test="exist classifier">
+        <setEventAttribute attr="eventType">combineMsgId($eventType,"-", $classifier)</setEventAttribute>
+    </when>
+    <setEventAttribute attr="eventType">replaceStrInStr($eventType, "/", "-")</setEventAttribute>
+    <setEventAttribute attr="eventType">replaceStringByRegex($eventType, "\s+|\s*\(", "_")</setEventAttribute>
+</parsingInstructions>

@@ -1,3 +1,8 @@
+<!--
+  Custom Event Attributes Required in FortiSIEM (Admin > Device Support > Event Attributes):
+  1. requestId (Type: String) - Mapped from CloudTrail requestID / responseElements.requestId
+  2. recipientAccountId (Type: String) - Mapped from CloudTrail recipientAccountId
+-->
 <eventFormatRecognizer><![CDATA[AWS_S3_LOG_CLOUDTRAIL]]></eventFormatRecognizer>
 <patternDefinitions>
     <pattern name="patARNDelimiter"><![CDATA[[^:/]+]]></pattern>
@@ -13,6 +18,7 @@
         <attrKeyMap attr="_eventTime" key="eventTime"/>
         <attrKeyMap attr="accessKeyId" key="accessKeyId"/>
         <attrKeyMap attr="accountId" key="accountId"/>
+        <attrKeyMap attr="recipientAccountId" key="recipientAccountId"/>
         <attrKeyMap attr="awsRegion" key="awsRegion"/>
         <attrKeyMap attr="details" key="DescribeDetail"/>
         <!-- Some AWS services provide the errorCode and errorMessage as top-level fields and others as part of responseElements -->
@@ -26,6 +32,8 @@
         <attrKeyMap attr="serviceName" key="eventSource"/>
         <attrKeyMap attr="actionName" key="eventType"/>
         <attrKeyMap attr="version" key="eventVersion"/>
+        <attrKeyMap attr="requestId" key="responseElements.requestId"/>
+        <attrKeyMap attr="requestId" key="requestID"/>
         <attrKeyMap attr="instanceArchitecture" key="requestParameters.architecture"/>
         <attrKeyMap attr="diskName" key="requestParameters.blockDeviceMapping.items[0].deviceName"/>
         <attrKeyMap attr="snapshotIdStr" key="requestParameters.blockDeviceMapping.items[0].ebs.snapshotId"/>
@@ -102,6 +110,7 @@
         <attrKeyMap attr="ec2InstanceId" key="responseElements.instances.instanceId"/>
         <attrKeyMap attr="ec2PreviousState" key="responseElements.instances.previousState.name"/>
         <attrKeyMap attr="ec2InstanceId" key="responseElements.instances[0].instanceId"/>
+        <attrKeyMap attr="ec2InstanceId" key="responseElements.instancesSet.items[0].instanceId"/>
         <!-- Identity & User -->
         <attrKeyMap attr="_srcIpAddr" key="sourceIPAddress"/>
         <attrKeyMap attr="appClientVersion" key="userAgent"/>
@@ -202,6 +211,28 @@
         <when test="exist _userName">
             <setEventAttribute attr="user">$_userName</setEventAttribute>
         </when>
+        <!-- AssumedRole: SSO (contains @) falls through to principal; all others use Role name -->
+        <when test="$identityType = 'AssumedRole'">
+            <choose>
+                <when test="exist sessionId">
+                    <choose>
+                        <when test="matches($sessionId, '@')"/>
+                        <when test="exist _issuerUser">
+                            <setEventAttribute attr="user">$_issuerUser</setEventAttribute>
+                        </when>
+                        <when test="exist role">
+                            <setEventAttribute attr="user">$role</setEventAttribute>
+                        </when>
+                    </choose>
+                </when>
+                <when test="exist _issuerUser">
+                    <setEventAttribute attr="user">$_issuerUser</setEventAttribute>
+                </when>
+                <when test="exist role">
+                    <setEventAttribute attr="user">$role</setEventAttribute>
+                </when>
+            </choose>
+        </when>
         <when test="exist principal">
             <switch>
                 <case>
@@ -246,11 +277,17 @@
         </when>
     </choose>
 
+    <!-- Preserve sessionIssuer ARN in appRole when present -->
+    <when test="exist _issuerSrcArn">
+        <setEventAttribute attr="appRole">$_issuerSrcArn</setEventAttribute>
+    </when>
+
+    <!-- Timestamp Normalization with Timezone -->
     <when test="exist _eventTime">
         <collectFieldsByRegex src="$_eventTime">
-            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>Z]]></regex>
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
         </collectFieldsByRegex>
-        <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time)</setEventAttribute>
+        <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
     </when>
 
     <when test="exist _srcIpAddr">
@@ -268,12 +305,12 @@
 
     <when test="exist _date">
         <collectFieldsByRegex src="$_date">
-            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>Z]]></regex>
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>(?:\.\d+)?<_tz:gPatTimeZone>]]></regex>
         </collectFieldsByRegex>
-        <setEventAttribute attr="tempCredCreationDate">toDateTime($_mon, $_day, $_year, $_time)</setEventAttribute>
+        <setEventAttribute attr="tempCredCreationDate">toDateTime($_mon, $_day, $_year, $_time, $_tz)</setEventAttribute>
     </when>
 
-<!-- Normalize serviceName: strip .amazonaws.com and convert to uppercase -->
+    <!-- Normalize serviceName: strip .amazonaws.com and convert to uppercase -->
     <when test="exist serviceName">
         <switch>
             <case>
@@ -422,4 +459,18 @@
             <setEventAttribute attr="filePath">$_requestKey</setEventAttribute>
         </when>
     </when>
+
+    <!-- resourceName fallback when resources[0].ARN is absent -->
+    <choose>
+        <when test="exist resourceName"/>
+        <when test="exist ec2InstanceId">
+            <setEventAttribute attr="resourceName">$ec2InstanceId</setEventAttribute>
+        </when>
+        <when test="exist bucketName">
+            <setEventAttribute attr="resourceName">$bucketName</setEventAttribute>
+        </when>
+        <when test="exist osObjName">
+            <setEventAttribute attr="resourceName">$osObjName</setEventAttribute>
+        </when>
+    </choose>
 </parsingInstructions>
