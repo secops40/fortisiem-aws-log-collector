@@ -1,0 +1,16 @@
+[Unit]
+Description=FortiSIEM AWS Log Collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/usr/local/fortisiem-aws-log-collector
+ExecStart=/usr/local/fortisiem-aws-log-collector/venv/bin/python /usr/local/fortisiem-aws-log-collector/collector.py -c /usr/local/fortisiem-aws-log-collector/config.json
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,425 @@
+<eventFormatRecognizer><![CDATA[AWS_S3_LOG_CLOUDTRAIL]]></eventFormatRecognizer>
+<patternDefinitions>
+    <pattern name="patARNDelimiter"><![CDATA[[^:/]+]]></pattern>
+    <pattern name="patExceptColon"><![CDATA[[^:]*]]></pattern>
+    <pattern name="patExceptDot"><![CDATA[[^.]+]]></pattern>
+</patternDefinitions>
+<parsingInstructions>
+    <collectFieldsByRegex src="$_rawmsg">
+        <regex><![CDATA[AWS_S3_LOG_CLOUDTRAIL:phCustId=<_custId:gPatInt>,reptDevIpAddr=<reptDevIpAddr:gPatIpAddr>,reptDevName=<reptDevName:gPatStrComma>,msg=<_body:gPatMesgBody>]]></regex>
+    </collectFieldsByRegex>
+    <setEventAttribute attr="eventType">AWS_CloudTrail_Generic</setEventAttribute>
+    <collectAndSetAttrByJSON src="$_body">
+        <attrKeyMap attr="_eventTime" key="eventTime"/>
+        <attrKeyMap attr="accessKeyId" key="accessKeyId"/>
+        <attrKeyMap attr="accountId" key="accountId"/>
+        <attrKeyMap attr="awsRegion" key="awsRegion"/>
+        <attrKeyMap attr="details" key="DescribeDetail"/>
+        <!-- Some AWS services provide the errorCode and errorMessage as top-level fields and others as part of responseElements -->
+        <attrKeyMap attr="errorString" key="errorCode"/>
+        <attrKeyMap attr="errorString" key="responseElements.errorCode"/>
+        <attrKeyMap attr="errReason" key="errorMessage"/>
+        <attrKeyMap attr="errReason" key="responseElements.errorMessage"/>
+        <attrKeyMap attr="categoryType" key="eventCategory"/>
+        <attrKeyMap attr="awsEventId" key="eventID"/>
+        <attrKeyMap attr="_eventName" key="eventName"/>
+        <attrKeyMap attr="serviceName" key="eventSource"/>
+        <attrKeyMap attr="actionName" key="eventType"/>
+        <attrKeyMap attr="version" key="eventVersion"/>
+        <attrKeyMap attr="instanceArchitecture" key="requestParameters.architecture"/>
+        <attrKeyMap attr="diskName" key="requestParameters.blockDeviceMapping.items[0].deviceName"/>
+        <attrKeyMap attr="snapshotIdStr" key="requestParameters.blockDeviceMapping.items[0].ebs.snapshotId"/>
+        <attrKeyMap attr="description" key="requestParameters.description"/>
+        <attrKeyMap attr="_ec2Name" key="requestParameters.filterSet.items[0].name"/>
+        <attrKeyMap attr="_hostIpAddr" key="requestParameters.filterSet.items[0].valueSet.items[0].value"/>
+        <attrKeyMap attr="groupID" key="requestParameters.groupId"/>
+        <attrKeyMap attr="userGrp" key="requestParameters.groupName"/>
+        <attrKeyMap attr="imageName" key="requestParameters.imageId"/>
+        <attrKeyMap attr="ec2InstanceId" key="requestParameters.instanceId"/>
+        <attrKeyMap attr="profileName" key="requestParameters.instanceProfileName"/>
+        <attrKeyMap attr="instanceType" key="requestParameters.instanceType"/>
+        <attrKeyMap attr="ec2InstanceId" key="requestParameters.instances[0].instanceId"/>
+        <attrKeyMap attr="ec2InstanceId" key="requestParameters.instancesSet.item.0.instanceId"/>
+        <attrKeyMap attr="ec2InstanceId" key="requestParameters.instancesSet.items.0.instanceId"/>
+        <attrKeyMap attr="srcIpPort" key="requestParameters.ipPermissions.items[0].fromPort"/>
+        <attrKeyMap attr="ipProto" key="requestParameters.ipPermissions.items[0].ipProtocol"/>
+        <attrKeyMap attr="destIpPort" key="requestParameters.ipPermissions.items[0].toPort"/>
+        <attrKeyMap attr="kernelId" key="requestParameters.kernelId"/>
+        <attrKeyMap attr="launchConfigName" key="requestParameters.launchConfigurationName"/>
+        <attrKeyMap attr="loadBalancerName" key="requestParameters.loadBalancerName"/>
+        <attrKeyMap attr="elasticLoadBalancerPageSize" key="requestParameters.pageSize"/>
+        <attrKeyMap attr="policyName" key="requestParameters.policyName"/>
+        <attrKeyMap attr="role" key="requestParameters.roleName"/>
+        <attrKeyMap attr="snapshotIdStr" key="requestParameters.snapshotId"/>
+        <attrKeyMap attr="targetUser" key="requestParameters.userName"/>
+        <attrKeyMap attr="volumeId" key="requestParameters.volumeId"/>
+        <attrKeyMap attr="vpcId" key="requestParameters.vpcId"/>
+        <!-- AWS SecretManager -->
+        <attrKeyMap attr="osObjName" key="requestParameters.secretId"/>
+        <!-- sharedEventID is consistent GUID for same event generated for source and target accounts cloudtrail records -->
+        <attrKeyMap attr="correlationId" key="sharedEventID"/>
+        <!-- tlsDetails in DescribeDBInstances -->
+        <attrKeyMap attr="tlsCipher" key="tlsDetails.cipherSuite"/>
+        <attrKeyMap attr="tlsVersion" key="tlsDetails.tlsVersion"/>
+        <!-- Requested or affected resource information -->
+        <attrKeyMap attr="accountId" key="resources[0].accountId"/>
+        <attrKeyMap attr="resourceType" key="resources[0].type"/>
+        <attrKeyMap attr="resourceName" key="resources[0].ARN"/>
+        <attrKeyMap attr="resourceType" key="resourceType"/>
+        <!-- Additional Event Data -->
+        <attrKeyMap attr="authenMethod" key="additionalEventData.AuthenticationMethod"/>
+        <attrKeyMap attr="mfaAuthenticated" key="additionalEventData.MFAUsed"/>
+        <attrKeyMap attr="destName" key="requestParameters.Host"/>
+        <attrKeyMap attr="destName" key="tlsDetails.clientProvidedHostHeader"/>
+        <attrKeyMap attr="resourceName" key="requestParameters.encryptionContext.SecretARN"/>
+        <!-- S3 bucket & object related requestParams -->
+        <attrKeyMap attr="objectPath" key="requestParameters.prefix"/>
+        <attrKeyMap attr="bucketName" key="requestParameters.bucketName"/>
+        <attrKeyMap attr="_requestKey" key="requestParameters.key"/>
+        <attrKeyMap attr="_objectType" key="resources[1].type"/>
+        <attrKeyMap attr="_s3BytesIn" key="additionalEventData.bytesTransferredIn"/>
+        <attrKeyMap attr="_s3BytesOut" key="additionalEventData.bytesTransferredOut"/>
+        <attrKeyMap attr="_s3ObjectSize" key="additionalEventData.objectSize"/>
+        <!-- ListSecrets filter -->
+        <attrKeyMap attr="filter" key="requestParameters.filters[0].key"/>
+        <attrKeyMap attr="queryFilter" key="requestParameters.filters[0].values[0]"/>
+        <!-- Service Event Details -->
+        <attrKeyMap attr="_vaultName" key="serviceEventDetails.backupVaultName"/>
+        <attrKeyMap attr="_roleArn" key="serviceEventDetails.iamRoleArn"/>
+        <attrKeyMap attr="resourceName" key="serviceEventDetails.resourceArn"/>
+        <attrKeyMap attr="resourceType" key="serviceEventDetails.resourceType"/>
+        <attrKeyMap attr="status" key="serviceEventDetails.state"/>
+        <!-- Elastic container service (ECS) -->
+        <attrKeyMap attr="cluster" key="requestParameters.cluster"/>
+        <attrKeyMap attr="task" key="requestParameters.taskDefinition"/>
+        <attrKeyMap attr="cluster" key="responseElements.cluster.clusterArn"/>
+        <!-- Response Elements -->
+        <attrKeyMap attr="awsActionResult" key="responseElements._return"/>
+        <attrKeyMap attr="_status" key="responseElements.ConsoleLogin"/>
+        <attrKeyMap attr="accessKeyId" key="responseElements.credentials.accessKeyId"/>
+        <attrKeyMap attr="_roleId" key="responseElements.assumedRoleUser.arn"/>
+        <attrKeyMap attr="ec2CurrentState" key="responseElements.instances.currentState.name"/>
+        <attrKeyMap attr="ec2InstanceId" key="responseElements.instances.instanceId"/>
+        <attrKeyMap attr="ec2PreviousState" key="responseElements.instances.previousState.name"/>
+        <attrKeyMap attr="ec2InstanceId" key="responseElements.instances[0].instanceId"/>
+        <!-- Identity & User -->
+        <attrKeyMap attr="_srcIpAddr" key="sourceIPAddress"/>
+        <attrKeyMap attr="appClientVersion" key="userAgent"/>
+        <attrKeyMap attr="userArn" key="userArn"/>
+        <attrKeyMap attr="accessKeyId" key="userIdentity.accessKeyId"/>
+        <attrKeyMap attr="accountId" key="userIdentity.accountId"/>
+        <attrKeyMap attr="identity" key="userIdentity.arn"/>
+        <attrKeyMap attr="caller" key="userIdentity.invokedBy"/>
+        <attrKeyMap attr="principal" key="userIdentity.principalId"/>
+        <attrKeyMap attr="_date" key="userIdentity.sessionContext.attributes.creationDate"/>
+        <attrKeyMap attr="mfaAuthenticated" key="userIdentity.sessionContext.attributes.mfaAuthenticated"/>
+        <attrKeyMap attr="_assumedRoot" key="userIdentity.sessionContext.assumedRoot"/>
+        <attrKeyMap attr="identityType" key="userIdentity.type"/>
+        <attrKeyMap attr="_userName" key="userIdentity.userName"/>
+        <!-- fields in IdentityCenterUser identity Types -->
+        <attrKeyMap attr="userId" key="userIdentity.onBehalfOf.userId"/>
+        <attrKeyMap attr="providerName" key="userIdentity.onBehalfOf.identityStoreArn"/>
+        <!-- Assume Role Session Issuer -->
+        <attrKeyMap attr="tokenIssuerType" key="userIdentity.sessionContext.sessionIssuer.type"/>
+        <attrKeyMap attr="_issuerPrincipal" key="userIdentity.sessionContext.sessionIssuer.principalId"/>
+        <attrKeyMap attr="_issuerSrcArn" key="userIdentity.sessionContext.sessionIssuer.arn"/>
+        <attrKeyMap attr="_issuerUser" key="userIdentity.sessionContext.sessionIssuer.userName"/>
+        <!-- Top-level fallback user fields -->
+        <attrKeyMap attr="user" key="userName"/>
+        <attrKeyMap attr="principal" key="userPrincipalId"/>
+        <attrKeyMap attr="identityType" key="userType"/>
+    </collectAndSetAttrByJSON>
+
+    <!-- User and ARN normalization from the userIdentity element -->
+    <choose>
+        <when test="not_exist identityType"/>
+        <when test="$identityType = 'AssumedRole'">
+            <when test="exist identity">
+                <switch>
+                    <case>
+                        <collectFieldsByRegex src="$identity">
+                            <regex><![CDATA[^arn:<:patExceptColon>:sts:<:patExceptColon>:<_acctId:patExceptColon>:assumed-role\/<role:patARNDelimiter>[:/]<sessionId:gPatMesgBody>$]]></regex>
+                        </collectFieldsByRegex>
+                    </case>
+                    <default/>
+                </switch>
+            </when>
+        </when>
+        <when test="$identityType IN 'AWSAccount,AWSService,FederatedUser,Role'">
+            <when test="exist _roleId">
+                <switch>
+                    <case>
+                        <collectFieldsByRegex src="$_roleId">
+                            <regex><![CDATA[^arn:<:patExceptColon>:sts:<:patExceptColon>:<_acctId:patExceptColon>:assumed-role\/<role:patARNDelimiter>[:/]<sessionId:gPatMesgBody>$]]></regex>
+                        </collectFieldsByRegex>
+                    </case>
+                    <default/>
+                </switch>
+            </when>
+            <when test="$identityType = 'AWSAccount'">
+                <when test="exist accountId">
+                    <setEventAttribute attr="user">$accountId</setEventAttribute>
+                </when>
+            </when>
+        </when>
+        <when test="$identityType = 'IAMUser'">
+            <when test="exist _userName">
+                <setEventAttribute attr="user">$_userName</setEventAttribute>
+            </when>
+        </when>
+        <when test="$identityType = 'Root'">
+            <when test="exist _userName">
+                <setEventAttribute attr="accountName">$_userName</setEventAttribute>
+            </when>
+            <setEventAttribute attr="user">Root</setEventAttribute>
+        </when>
+        <when test="$identityType = 'Directory'">
+            <when test="exist _userName">
+                <setEventAttribute attr="user">$_userName</setEventAttribute>
+            </when>
+        </when>
+        <when test="$identityType = 'IdentityCenterUser'">
+            <!-- The onBehalfOf section contains information about the IAM Identity Center user ID and identity store ARN -->
+        </when>
+        <when test="$identityType = 'SAMLUser'">
+            <when test="exist _userName">
+                <setEventAttribute attr="user">$_userName</setEventAttribute>
+            </when>
+        </when>
+        <when test="$identityType = 'WebIdentityUser'">
+            <when test="exist _userName">
+                <setEventAttribute attr="user">$_userName</setEventAttribute>
+            </when>
+        </when>
+    </choose>
+
+    <!-- Normalize actor/user in cloudtrail userIdentity element -->
+    <choose>
+        <when test="exist user"/>
+        <when test="exist caller">
+            <setEventAttribute attr="user">$caller</setEventAttribute>
+        </when>
+        <when test="exist _userName">
+            <setEventAttribute attr="user">$_userName</setEventAttribute>
+        </when>
+        <when test="exist principal">
+            <switch>
+                <case>
+                    <collectFieldsByRegex src="$principal">
+                        <regex><![CDATA[^<:patExceptColon>:<user:gPatStr>$]]></regex>
+                    </collectFieldsByRegex>
+                </case>
+                <default>
+                    <setEventAttribute attr="user">$principal</setEventAttribute>
+                </default>
+            </switch>
+        </when>
+        <when test="exist identity">
+            <switch>
+                <case>
+                    <collectFieldsByRegex src="$identity">
+                        <regex><![CDATA[^arn:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<_acctId:patExceptColon>:<_resourceType:patARNDelimiter>[\/:]<user:gPatMesgBody>$]]></regex>
+                    </collectFieldsByRegex>
+                </case>
+                <default/>
+            </switch>
+        </when>
+    </choose>
+
+    <!-- For Session Issuer type if present -->
+    <choose>
+        <when test="not_exist tokenIssuerType"/>
+        <when test="$tokenIssuerType = 'Root'">
+            <when test="exist _issuerUser">
+                <setEventAttribute attr="accountName">$_issuerUser</setEventAttribute>
+            </when>
+        </when>
+        <when test="$tokenIssuerType = 'Role'">
+            <when test="exist _issuerUser">
+                <setEventAttribute attr="role">$_issuerUser</setEventAttribute>
+            </when>
+        </when>
+        <when test="$tokenIssuerType = 'IAMUser'">
+            <when test="exist _issuerUser">
+                <setEventAttribute attr="srcUser">$_issuerUser</setEventAttribute>
+            </when>
+        </when>
+    </choose>
+
+    <when test="exist _eventTime">
+        <collectFieldsByRegex src="$_eventTime">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>Z]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="deviceTime">toDateTime($_mon, $_day, $_year, $_time)</setEventAttribute>
+    </when>
+
+    <when test="exist _srcIpAddr">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$_srcIpAddr">
+                    <regex><![CDATA[^<srcIpAddr:gPatIpAddr>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default>
+                <setEventAttribute attr="srcName">$_srcIpAddr</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <when test="exist _date">
+        <collectFieldsByRegex src="$_date">
+            <regex><![CDATA[<_year:gPatYear>-<_mon:gPatMonNum>-<_day:gPatDay>T<_time:gPatTime>Z]]></regex>
+        </collectFieldsByRegex>
+        <setEventAttribute attr="tempCredCreationDate">toDateTime($_mon, $_day, $_year, $_time)</setEventAttribute>
+    </when>
+
+<!-- Normalize serviceName: strip .amazonaws.com and convert to uppercase -->
+    <when test="exist serviceName">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$serviceName">
+                    <regex><![CDATA[^<_svcPrefix:patExceptDot>\.amazonaws\.com$]]></regex>
+                </collectFieldsByRegex>
+                <setEventAttribute attr="serviceName">toUpper($_svcPrefix)</setEventAttribute>
+            </case>
+            <default>
+                <setEventAttribute attr="serviceName">toUpper($serviceName)</setEventAttribute>
+            </default>
+        </switch>
+    </when>
+
+    <setEventAttribute attr="eventType">combineMsgId("AWS-CloudTrail-", $serviceName, "-", $_eventName)</setEventAttribute>
+
+    <when test="exist _status">
+        <setEventAttribute attr="eventType">combineMsgId($eventType, "-", $_status)</setEventAttribute>
+    </when>
+
+    <!-- Determine if action was successful or not -->
+    <choose>
+        <when test="exist errReason">
+            <setEventAttribute attr="status">failed</setEventAttribute>
+        </when>
+        <when test="exist errorString">
+            <setEventAttribute attr="status">failed</setEventAttribute>
+        </when>
+        <otherwise>
+            <setEventAttribute attr="status">success</setEventAttribute>
+        </otherwise>
+    </choose>
+
+    <!-- ECS Cluster and Task normalization -->
+    <when test="exist cluster">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$cluster">
+                    <regex><![CDATA[^arn:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patARNDelimiter>[:/]<cluster:gPatMesgBodyMin>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <case>
+                <collectFieldsByRegex src="$cluster">
+                    <regex><![CDATA[^arn:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<cluster:gPatMesgBodyMin>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <when test="exist task">
+        <switch>
+            <case>
+                <collectFieldsByRegex src="$task">
+                    <regex><![CDATA[^arn:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patARNDelimiter>[:/]<task:gPatMesgBodyMin>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <case>
+                <collectFieldsByRegex src="$task">
+                    <regex><![CDATA[^arn:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<:patExceptColon>:<task:gPatMesgBodyMin>$]]></regex>
+                </collectFieldsByRegex>
+            </case>
+            <default/>
+        </switch>
+    </when>
+
+    <choose>
+        <when test="$_eventName = 'DescribeInstances'">
+            <choose>
+                <when test="not_exist _hostIpAddr"/>
+                <when test="exist _ec2Name">
+                    <when test="$_ec2Name = 'instance-state-name'">
+                        <setEventAttribute attr="ec2CurrentState">$_hostIpAddr</setEventAttribute>
+                    </when>
+                    <when test="$_ec2Name = 'private-ip-address'">
+                        <switch>
+                            <case>
+                                <collectFieldsByRegex src="$_hostIpAddr">
+                                    <regex><![CDATA[^<hostIpAddr:gPatIpAddr>$]]></regex>
+                                </collectFieldsByRegex>
+                            </case>
+                            <default>
+                                <setEventAttribute attr="hostName">$_hostIpAddr</setEventAttribute>
+                            </default>
+                        </switch>
+                    </when>
+                </when>
+            </choose>
+        </when>
+        <when test="$_eventName = 'RegisterImage'">
+            <collectAndSetAttrByJSON src="$_body">
+                <attrKeyMap attr="imageName" key="requestParameters.name"/>
+            </collectAndSetAttrByJSON>
+        </when>
+        <when test="$_eventName = 'CreateImage'">
+            <collectAndSetAttrByJSON src="$_body">
+                <attrKeyMap attr="imageName" key="requestParameters.name"/>
+            </collectAndSetAttrByJSON>
+        </when>
+        <when test="$_eventName = 'ConsoleLogin'">
+            <choose>
+                <when test="exist user"/>
+                <when test="exist userArn">
+                    <switch>
+                        <case>
+                            <collectFieldsByRegex src="$userArn">
+                                <regex><![CDATA[^arn.*[/:]<user:gPatStr>$]]></regex>
+                            </collectFieldsByRegex>
+                        </case>
+                        <default/>
+                    </switch>
+                </when>
+                <when test="exist identity">
+                    <switch>
+                        <case>
+                            <collectFieldsByRegex src="$identity">
+                                <regex><![CDATA[^arn.*[/:]<user:gPatStr>$]]></regex>
+                            </collectFieldsByRegex>
+                        </case>
+                        <default/>
+                    </switch>
+                </when>
+            </choose>
+        </when>
+        <when test="matches($eventType, 'AWS-CloudTrail-S3')">
+            <when test="exist _objectType">
+                <setEventAttribute attr="resourceType">$_objectType</setEventAttribute>
+            </when>
+        </when>
+    </choose>
+
+    <!-- S3 Object events attributes -->
+    <when test="exist _s3BytesIn">
+        <setEventAttribute attr="recvBytes64">$_s3BytesIn</setEventAttribute>
+    </when>
+    <when test="exist _s3BytesOut">
+        <setEventAttribute attr="sentBytes64">$_s3BytesOut</setEventAttribute>
+    </when>
+    <when test="exist _s3ObjectSize">
+        <setEventAttribute attr="fileSize64">$_s3ObjectSize</setEventAttribute>
+    </when>
+
+    <!-- S3 Bucket key mapping -->
+    <when test="exist bucketName">
+        <when test="exist _requestKey">
+            <setEventAttribute attr="filePath">$_requestKey</setEventAttribute>
+        </when>
+    </when>
+</parsingInstructions>

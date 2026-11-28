@@ -1,0 +1,105 @@
+{
+  "log_level": "INFO",
+  "raw_dir": "/usr/local/fortisiem-aws-log-collector/logs/raw",
+  "output_dir": "/usr/local/fortisiem-aws-log-collector/logs/processed",
+  "state_db": "/usr/local/fortisiem-aws-log-collector/logs/state.db",
+  "write_raw_logs": false,
+  "preserve_s3_path": false,
+  "visibility_timeout": 300,
+  "visibility_heartbeat": 120,
+  "wait_time_seconds": 20,
+  "max_messages": 10,
+  "collectors": [
+    {
+      "log": "vpcflow",
+      "output_dir": "/opt/phoenix/cache/syslog/98.87.170.71",
+      "workers": 4,
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/vpcflow",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "aws_session_token": "",
+      "log_keyword": "AWS_S3_LOG_VPCFLOW-us-west-2",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "guardduty",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/guardduty",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_S3_LOG_GUARDDUTY",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "cloudtrail-acct1",
+      "output_dir": "/opt/phoenix/cache/syslog/98.87.170.74",
+      "workers": 8,
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/cloudtrail-acct1",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_S3_LOG_CLOUDTRAIL",
+      "s3_key_include_regex": "/CloudTrail/",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.74",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "securityhub",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/securityhub",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_SECURITY_HUB_EVENT_DATA",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "dns",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/dns",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_S3_LOG_DNS",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "network-firewall",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/networkfirewall",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_S3_FIREWALL",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "WAF",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/waf",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "log_keyword": "AWS_S3_WAF",
+      "phCustId": "1",
+      "reptDevIpAddr": "98.87.170.71",
+      "reptDevName": "amazon.com"
+    },
+    {
+      "log": "ec2-windows",
+      "sqs": "https://sqs.us-west-2.amazonaws.com/700000000000/ec2-windows",
+      "region": "us-west-2",
+      "aws_access_key_id": "AKIAxxxxxxxxxxxxxxxx",
+      "aws_secret_access_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "process_mode": "raw"
+    }
+  ]
+}
